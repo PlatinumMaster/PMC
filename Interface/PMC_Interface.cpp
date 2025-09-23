@@ -186,15 +186,50 @@ namespace pmc {
         extern u32 os_MemRegionEnds[];
     };
 
-    static int heapSize;
+    struct CodeSetInfo {
+        u32 CodeOffset;
+        u32 EntryPoint;
+        u32 LoadAddress;
+        u32 Size;
+    };
+
+    static CodeSetInfo* g_ARM9Info = (CodeSetInfo*)0x02FFFE20;
+    static CodeSetInfo* g_ARM7Info = (CodeSetInfo*)0x02FFFE30;
+
+    static u32 g_DSiModeLegacyRAMStart  = 0x022050C0;
+    static u32 g_DSiModeLegacyRAMEnd    = 0x023E0000;
 
     exl::heap::Allocator* System::CreateSystemAllocator() {
-        u32 availSize = os_MemRegionEnds[0] - os_MemRegionStarts[0];
-        u32 allocatedSize = (availSize > PMC_SYSHEAP_MAX_SIZE ? PMC_SYSHEAP_MAX_SIZE : availSize) & ~7;
-        os_MemRegionEnds[0] &= ~7;
-        os_MemRegionEnds[0] -= allocatedSize;
-        heapSize = allocatedSize;
-        return exl::heap::HeapArea::CreateIn("PMCSystemHeap", reinterpret_cast<void*>(os_MemRegionEnds[0]), allocatedSize);
+        u32 allocatedPtr;
+        u32 allocatedSize;
+
+        u32* pAllocRegionStart;
+        u32* pAllocRegionEnd;
+
+        if (!hw_isDSi()) {
+            //allocate from end of main memory
+            pAllocRegionStart = &os_MemRegionStarts[0];
+            pAllocRegionEnd = &os_MemRegionEnds[0];
+        } else {
+            //allocate in the same area as above, but do not use the memory region markers
+            //retail DSi games actually do not seem to use the lower 4MB of memory on NDS-compatible games
+            //for anything but code
+            pAllocRegionStart = &g_DSiModeLegacyRAMStart;
+            pAllocRegionEnd = &g_DSiModeLegacyRAMEnd;
+        }
+
+        u32 realMemoryStart = *pAllocRegionStart;
+        u32 arm7End = g_ARM7Info->LoadAddress + g_ARM7Info->Size;
+        if (realMemoryStart < arm7End) {
+            //beware that the main memory actually contains the ARM7 code
+            realMemoryStart = arm7End;
+        }
+        u32 availSize = *pAllocRegionEnd - realMemoryStart;
+        allocatedSize = (availSize > PMC_SYSHEAP_MAX_SIZE ? PMC_SYSHEAP_MAX_SIZE : availSize) & ~7;
+        allocatedPtr = (*pAllocRegionEnd - allocatedSize) & ~7;
+        *pAllocRegionEnd = allocatedPtr;
+
+        return exl::heap::HeapArea::CreateIn("PMCSystemHeap", reinterpret_cast<void*>(allocatedPtr), allocatedSize);
     }
 
     void System::Init() {
@@ -206,7 +241,7 @@ namespace pmc {
         LinkOverlay(OVLID_ARM9_RESERVE);
         nn::os::Overlay self;
         self.LoadHeader(0, 344);
-        char* ARM9_ADDRESS = (char*)0x02004000;
+        char* ARM9_ADDRESS = (char*)g_ARM9Info->LoadAddress;
         cp15_flushDC(ARM9_ADDRESS, self.Header.MountAddress - ARM9_ADDRESS);
     }
 
@@ -310,10 +345,12 @@ namespace pmc {
 
     void System::StartOverlay(nn::os::Overlay& ovl) {
         u32 codeSize = ovl.GetCodeSize();
-        int *Flag = (int *)0x214BFA0;
+        int *pHasDSiOverlayFlag = (int *)0x214BFA0;
 
-        if (ovl.Header.MountAddress >= (char*)0x2700000 && ovl.Header.MountAddress < (char*)0x276DDE0 && hw_isDSi() && !*Flag) {
-            *Flag = 1;
+        if (ovl.Header.MountAddress >= (char*)0x2700000 && ovl.Header.MountAddress < (char*)0x276DDE0 && hw_isDSi() && !*pHasDSiOverlayFlag) {
+            //0x276DDE0 is the start of the main memory on the DSi
+            //therefore, I would assume that 0x2700000-0x276DDE0 is the DSi overlay area
+            *pHasDSiOverlayFlag = 1;
         }
 
         u32 compFlag = (ovl.Header.Extra & 0xF000000);
