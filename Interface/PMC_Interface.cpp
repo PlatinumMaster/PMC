@@ -13,14 +13,15 @@
 #include "nds/hw.h"
 #include "nds/compression.h"
 
+
 namespace pmc {
     namespace hooks {
-        extern "C" b32 THUMB_BRANCH_LINK_GFL_OvlLoad_0x76(int target, int ovlId) { //hooks into GFL_OvlLoad's LoadOverlay call
+        extern "C" b32 ARM_BRANCH_LINK_GFL_OvlLoad_0xB8(int target, int ovlId) { //hooks into GFL_OvlLoad's LoadOverlay call
             System::LoadOverlay(target, ovlId);
             return true;
         }
 
-        extern "C" void THUMB_BRANCH_LINK_GFL_OvlEntryUnload_0xA(int target, int ovlId) { //hooks into GFL_OvlEntryUnload's UnloadOverlay call
+        extern "C" void ARM_BRANCH_LINK_GFL_OvlEntryUnload_0x14(int target, int ovlId) { //hooks into GFL_OvlEntryUnload's UnloadOverlay call
             nn::os::Overlay::Unload(target, ovlId);
             //Check for no longer needed modules
             System::NotifyUnloadOverlay(ovlId);
@@ -240,7 +241,7 @@ namespace pmc {
         LinkOverlay(OVLID_ARM7_RESERVE);
         LinkOverlay(OVLID_ARM9_RESERVE);
         nn::os::Overlay self;
-        self.LoadHeader(0, 344);
+        self.LoadHeader(0, 237);
         char* ARM9_ADDRESS = (char*)g_ARM9Info->LoadAddress;
         cp15_flushDC(ARM9_ADDRESS, self.Header.MountAddress - ARM9_ADDRESS);
     }

@@ -12,18 +12,18 @@ FULL_COPY_ARM9_0x0200400C_PMCBootCode: @Inject to garbage data in secure area
 	BL _PMCSystemInit
 	POP {PC}
 	.align 2
-OVL_344: .word 0x158
+OVL_344: .word 237
 	.size	FULL_COPY_ARM9_0x0200400C_PMCBootCode, .-FULL_COPY_ARM9_0x0200400C_PMCBootCode
 
 FULL_COPY_main_0x6: @hook instead of GFLAppInit in main(). The reason why we are not doing this in SystemInit is that a lot of patches might want to use GFL functions in their DllMain.
 	BL 0x0200400D
 	.size	FULL_COPY_main_0x6, .-FULL_COPY_main_0x6
 
-FULL_COPY_GetUserMemRegionDefaultStart_0x7C_AdjustHeapStart:
-	.word 0x022050C0
-	.size	FULL_COPY_GetUserMemRegionDefaultStart_0x7C_AdjustHeapStart, .-FULL_COPY_GetUserMemRegionDefaultStart_0x7C_AdjustHeapStart
+FULL_COPY_GetUserMemRegionDefaultStart_0xB0_AdjustHeapStart:
+	.word 0x221BD20
+	.size	FULL_COPY_GetUserMemRegionDefaultStart_0xB0_AdjustHeapStart, .-FULL_COPY_GetUserMemRegionDefaultStart_0xB0_AdjustHeapStart
 
-FULL_COPY_sys_read_overlay_header_0xFC_UncapOverlayMaximum:
+FULL_COPY_sys_read_overlay_header_0x174_UncapOverlayMaximum:
 	.word 0x7FFFFFFF
-	.size	FULL_COPY_sys_read_overlay_header_0xFC_UncapOverlayMaximum, .-FULL_COPY_sys_read_overlay_header_0xFC_UncapOverlayMaximum
+	.size	FULL_COPY_sys_read_overlay_header_0x174_UncapOverlayMaximum, .-FULL_COPY_sys_read_overlay_header_0x174_UncapOverlayMaximum
 	
